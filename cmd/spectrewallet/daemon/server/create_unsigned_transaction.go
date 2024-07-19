@@ -135,7 +135,7 @@ func (s *server) selectUTXOs(spendAmount uint64, isSendAll bool, feePerInput uin
 
 		fee := feePerInput * uint64(len(selectedUTXOs))
 		totalSpend := spendAmount + fee
-		if !isSendAll && totalValue >= totalSpend {
+		if !isSendAll && (totalValue == totalSpend || (totalValue > totalSpend && len(selectedUTXOs) > 1)) {
 			break
 		}
 	}
