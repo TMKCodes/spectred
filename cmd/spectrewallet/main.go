@@ -31,6 +31,10 @@ func main() {
 		err = startDaemon(config.(*startDaemonConfig))
 	case sweepSubCmd:
 		err = sweep(config.(*sweepConfig))
+	case versionSubCmd:
+		showVersion()
+	case getDaemonVersionSubCmd:
+		err = getDaemonVersion(config.(*getDaemonVersionConfig))
 	default:
 		err = errors.Errorf("Unknown sub-command '%s'\n", subCmd)
 	}

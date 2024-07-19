@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/spectre-project/spectred/domain/consensus/model/externalapi"
+	"github.com/spectre-project/spectred/version"
 
 	"github.com/spectre-project/spectred/util/txmass"
 
@@ -64,6 +65,7 @@ func Start(params *dagconfig.Params, listen, rpcServer string, keysFilePath stri
 	if profile != "" {
 		profiling.Start(profile, log)
 	}
+	log.Infof("Version %s", version.Version())
 
 	listener, err := net.Listen("tcp", listen)
 	if err != nil {
