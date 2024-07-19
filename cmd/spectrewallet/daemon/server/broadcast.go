@@ -10,6 +10,7 @@ import (
 	"github.com/spectre-project/spectred/cmd/spectrewallet/libspectrewallet"
 	"github.com/spectre-project/spectred/cmd/spectrewallet/libspectrewallet/serialization"
 	"github.com/spectre-project/spectred/domain/consensus/model/externalapi"
+	"github.com/spectre-project/spectred/domain/consensus/utils/consensushashing"
 	"github.com/spectre-project/spectred/infrastructure/network/rpcclient"
 )
 
@@ -61,7 +62,7 @@ func (s *server) broadcast(transactions [][]byte, isDomain bool) ([]string, erro
 }
 
 func sendTransaction(client *rpcclient.RPCClient, tx *externalapi.DomainTransaction) (string, error) {
-	submitTransactionResponse, err := client.SubmitTransaction(appmessage.DomainTransactionToRPCTransaction(tx), false)
+	submitTransactionResponse, err := client.SubmitTransaction(appmessage.DomainTransactionToRPCTransaction(tx), consensushashing.TransactionID(tx).String(), false)
 	if err != nil {
 		return "", errors.Wrapf(err, "error submitting transaction")
 	}
