@@ -3,6 +3,7 @@ package server
 import (
 	"context"
 
+	"github.com/pkg/errors"
 	"github.com/spectre-project/spectred/cmd/spectrewallet/daemon/pb"
 	"github.com/spectre-project/spectred/cmd/spectrewallet/libspectrewallet"
 )
@@ -13,13 +14,15 @@ type balancesMapType map[*walletAddress]*balancesType
 func (s *server) GetBalance(_ context.Context, _ *pb.GetBalanceRequest) (*pb.GetBalanceResponse, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
+	if !s.isSynced() {
+		return nil, errors.Errorf("wallet daemon is not synced yet, %s", s.formatSyncStateReport())
+	}
 
 	dagInfo, err := s.rpcClient.GetBlockDAGInfo()
 	if err != nil {
 		return nil, err
 	}
 	daaScore := dagInfo.VirtualDAAScore
-	maturity := s.params.BlockCoinbaseMaturity
 
 	balancesMap := make(balancesMapType, 0)
 	for _, entry := range s.utxosSortedByAmount {
@@ -30,7 +33,7 @@ func (s *server) GetBalance(_ context.Context, _ *pb.GetBalanceRequest) (*pb.Get
 			balances = new(balancesType)
 			balancesMap[address] = balances
 		}
-		if isUTXOSpendable(entry, daaScore, maturity) {
+		if s.isUTXOSpendable(entry, daaScore) {
 			balances.available += amount
 		} else {
 			balances.pending += amount
@@ -62,9 +65,9 @@ func (s *server) GetBalance(_ context.Context, _ *pb.GetBalanceRequest) (*pb.Get
 	}, nil
 }
 
-func isUTXOSpendable(entry *walletUTXO, virtualDAAScore uint64, coinbaseMaturity uint64) bool {
+func (s *server) isUTXOSpendable(entry *walletUTXO, virtualDAAScore uint64) bool {
 	if !entry.UTXOEntry.IsCoinbase() {
 		return true
 	}
-	return entry.UTXOEntry.BlockDAAScore()+coinbaseMaturity < virtualDAAScore
+	return entry.UTXOEntry.BlockDAAScore()+s.coinbaseMaturity < virtualDAAScore
 }

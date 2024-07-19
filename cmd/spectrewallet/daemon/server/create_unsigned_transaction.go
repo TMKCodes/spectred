@@ -3,14 +3,12 @@ package server
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/pkg/errors"
 	"github.com/spectre-project/spectred/cmd/spectrewallet/daemon/pb"
 	"github.com/spectre-project/spectred/cmd/spectrewallet/libspectrewallet"
 	"github.com/spectre-project/spectred/domain/consensus/utils/constants"
 	"github.com/spectre-project/spectred/util"
-	"golang.org/x/exp/slices"
 )
 
 // TODO: Implement a better fee estimation mechanism
@@ -106,19 +104,14 @@ func (s *server) selectUTXOs(spendAmount uint64, isSendAll bool, feePerInput uin
 		return nil, 0, 0, err
 	}
 
-	coinbaseMaturity := s.params.BlockCoinbaseMaturity
-	if dagInfo.NetworkName == "spectre-testnet-1" {
-		coinbaseMaturity = 1000
-	}
-
 	for _, utxo := range s.utxosSortedByAmount {
-		if (fromAddresses != nil && !slices.Contains(fromAddresses, utxo.address)) ||
-			!isUTXOSpendable(utxo, dagInfo.VirtualDAAScore, coinbaseMaturity) {
+		if (fromAddresses != nil && !walletAddressesContain(fromAddresses, utxo.address)) ||
+			!s.isUTXOSpendable(utxo, dagInfo.VirtualDAAScore) {
 			continue
 		}
 
 		if broadcastTime, ok := s.usedOutpoints[*utxo.Outpoint]; ok {
-			if time.Since(broadcastTime) > time.Minute {
+			if s.usedOutpointHasExpired(broadcastTime) {
 				delete(s.usedOutpoints, *utxo.Outpoint)
 			} else {
 				continue
@@ -155,4 +148,14 @@ func (s *server) selectUTXOs(spendAmount uint64, isSendAll bool, feePerInput uin
 	}
 
 	return selectedUTXOs, totalReceived, totalValue - totalSpend, nil
+}
+
+func walletAddressesContain(addresses []*walletAddress, contain *walletAddress) bool {
+	for _, address := range addresses {
+		if *address == *contain {
+			return true
+		}
+	}
+
+	return false
 }
